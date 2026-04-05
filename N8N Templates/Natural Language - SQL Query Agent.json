@@ -1,0 +1,232 @@
+{
+  "name": "Natural Language - SQL Query Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nThis is your SQL Buddy. How can I assist you today?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dba53315-1a95-4da9-8fc9-252a02a880f3",
+      "name": "When chat message received",
+      "webhookId": "e9d8a4a7-2b08-40a0-90c1-d7ff9652122d"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT table_name, column_name, data_type, is_nullable\nFROM information_schema.columns\nWHERE table_schema = 'public'\nAND table_name != 'N8N Automation'\nORDER BY table_name, ordinal_position;",
+        "options": {}
+      },
+      "id": "cf3148e3-e5d5-47f6-9ff8-43f8f20a6bc6",
+      "name": "Fetch Schema",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oRyYckifDncypsGN",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst schema = items.map(i => `${i.json.table_name}.${i.json.column_name} (${i.json.data_type})`).join('\\n');\nreturn [{ json: { schema, chatInput: $('When chat message received').item.json.chatInput } }];"
+      },
+      "id": "7e0d0f70-72c5-42ea-b2e1-8cfa26040a8d",
+      "name": "Format Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a PostgreSQL query for: {{ $(\"When chat message received\").item.json.chatInput }}\n\nDatabase Schema:\n{{ $json.schema }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a PostgreSQL SQL query generator.\n\nThe schema format is: table_name.column_name (data_type).\nEach line represents ONE column in a table.\n\nSTRICT RULES:\n1. Generate ONLY a valid PostgreSQL SELECT query.\n2. Output must be a JSON object with a single key: \"sql_query\".\n3. Use ONLY the exact table names and exact column names provided in the schema.\n4. DO NOT create, guess, rename, or hallucinate any column or table names.\n5. NEVER use a column that is not explicitly present in the schema.\n6. If a required column is not present, generate the closest valid query using available columns.\n\nTABLE RULES:\n7. Columns listed under the same table belong to that table.\n8. Use JOINs ONLY when multiple tables are required AND a clear relationship exists (same column name like customer_id).\n9. If no clear relationship exists, DO NOT use JOIN.\n\nQUERY RULES:\n10. Always generate complete and valid SQL syntax.\n11. NEVER generate empty parentheses ().\n12. NEVER use SUM(), AVG(), COUNT() without a valid column.\n13. NEVER generate incomplete clauses (GROUP BY, WHERE, IN, ORDER BY).\n14. NEVER leave trailing commas.\n\nFILTER RULES:\n15. When filtering text (e.g., country, city), ALWAYS use ILIKE '%value%'.\n16. When user mentions \"latest\", \"recent\", or \"current\":\n    - Use ORDER BY date_column DESC LIMIT 1.\n\nFISCAL YEAR RULES:\n17. Interpret all year-based queries as fiscal years (NOT calendar years).\n18. Fiscal Year Y = September 1 of (Y-1) to August 31 of (Y).\n19. When filtering by year:\n    - date_column >= 'YYYY-09-01' (previous year)\n    - AND date_column <= 'YYYY-08-31' (current year).\n20. DO NOT use EXTRACT(YEAR).\n\nAGGREGATION RULES:\n21. Use SUM() for total/sum/overall metrics on numeric columns.\n22. Use AVG() for averages.\n23. Use COUNT() for counts.\n24. When aggregation is used with categories:\n    - Use GROUP BY those columns.\n25. Always alias aggregated columns clearly.\n26. Only apply aggregation on numeric columns.\n\nMAPPING RULES:\n27. Map user terms to closest available columns:\n    - \"revenue\" or \"gross revenue\" → revenue / sales_amount / net_sales\n    - \"net sales\" → net_sales (always prefer if available)\n    - \"customer\" → customer_id / customer_name\n    - \"date\" → order_date / transaction_date\n\nDATA TYPE RULES:\n28. Always match column data types in filters:\n    - TEXT → use 'value'\n    - NUMERIC → no quotes\n    - DATE → 'YYYY-MM-DD'\n29. Infer correct type from schema.\n\nCONSISTENCY RULES:\n30. Always use the SAME column for the same concept.\n31. For the same question, generate the SAME SQL structure.\n32. Prefer simple and stable queries.\n\nVALIDATION RULES:\n33. Ensure ALL columns used exist exactly in the schema.\n34. Ensure aggregation functions include valid columns.\n35. Ensure no empty (), no broken clauses, no invalid syntax.\n\nSAFETY RULES:\n36. ONLY generate SELECT queries.\n37. DO NOT generate INSERT, UPDATE, DELETE, DROP, or ALTER.\n\nFORMATTING:\n38. Return ONLY JSON.\n39. Use double quotes ONLY for table names with spaces.\n\nExample:\nSchema:\nSales.customer\nSales.revenue\n\nOutput:\n{\n  \"sql_query\": \"SELECT customer, revenue FROM \\\"Sales\\\";\"\n}",
+          "maxIterations": 3
+        }
+      },
+      "id": "76e3c484-2e69-43b1-b95b-408b3beeabed",
+      "name": "Generate SQL",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \"sql_query\": \"SELECT product_name, SUM(revenue) as gross_revenue FROM sales WHERE year = 2021 GROUP BY product_name ORDER BY gross_revenue DESC LIMIT 10;\" }"
+      },
+      "id": "ed2060e0-5e7e-4176-b182-5b3cbf90b2a2",
+      "name": "Structured Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        848,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.output.sql_query }}",
+        "options": {}
+      },
+      "id": "0ab6dfa6-621b-482b-a684-918bd13dec58",
+      "name": "Execute Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1024,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oRyYckifDncypsGN",
+          "name": "Postgres account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all();\nif (results.length === 0) return [{ json: { output: 'No data available for this query' } }];\nconst formatted = results.map((r, i) => `${i+1}. ${Object.values(r.json).join(' - ')}`).join('\\n');\nreturn [{ json: { output: formatted } }];"
+      },
+      "id": "224e4f6b-fd2c-418b-806d-38fa28e59348",
+      "name": "Format Answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        688,
+        224
+      ],
+      "id": "47a02636-d400-4c23-9556-2e47987e417d",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "TOUq4gsIUvl33vqP",
+          "name": "Mistral Cloud account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Fetch Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Schema": {
+      "main": [
+        [
+          {
+            "node": "Format Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Schema": {
+      "main": [
+        [
+          {
+            "node": "Generate SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SQL": {
+      "main": [
+        [
+          {
+            "node": "Execute Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate SQL",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Query": {
+      "main": [
+        [
+          {
+            "node": "Format Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate SQL",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7567968f-d931-4420-b522-69062cb203f7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d9b44e682cf92a47ee3042175451f8023819299fd7d3487dc6b60585896fc"
+  },
+  "id": "M2bd6ZU7KmhBiLm5",
+  "tags": []
+}
