@@ -10,8 +10,7 @@ It simulates a real-world business workflow where data is received periodically,
 
 Interact with the system using the public endpoint:
 
-👉 **Live Chat Interface**  
-https://namratha9819.app.n8n.cloud/webhook/e9d8a4a7-2b08-40a0-90c1-d7ff9652122d/chat
+👉[Live Chat Interface](https://namratha9819.app.n8n.cloud/webhook/e9d8a4a7-2b08-40a0-90c1-d7ff9652122d/chat)
 
 ### 🧪 Try Sample Queries
 - Top 5 customers by net sales in 2021  
@@ -97,9 +96,8 @@ This repository includes n8n workflow templates in JSON format.
 
 ## 🎥 Social Profiles
 
-👉 YouTube: [Add your YouTube link here]
-💼 LinkedIn: [Add your LinkedIn link here]  
-
+👉 [YouTube](https://youtu.be/VrZaqymhyOs)
+💼 [LinkedIn](https://www.linkedin.com/posts/namratha-ravula_sql-dataanalytics-ai-ugcPost-7446581868902334465-t6A4?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD-2POMBXhq2oXj94XjyWKK8nb5c4ZnTz6w)
 ---
 
 ## 🎯 Use Case
@@ -125,6 +123,6 @@ This system is useful in scenarios where:
 This project combines **automation + AI-powered querying** to create a seamless data pipeline that enables faster and more efficient decision-making.
 
 ## 🔗 Connect With Me
-Ravula Namratha
+**Ravula Namratha**
 ravulanamratha98@gmail.com
 
